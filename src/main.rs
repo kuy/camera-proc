@@ -19,8 +19,8 @@ fn main() {
     thread::spawn(move || {
         let mut camera = Camera::new_with(
             4,
-            640,
-            480,
+            800,
+            600,
             30,
             nokhwa::FrameFormat::MJPEG,
             nokhwa::CaptureAPIBackend::Auto,
@@ -118,7 +118,7 @@ fn main() {
         let uniforms = uniform! {
             matrix: [
                 [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
+                [0.0, -1.0, 0.0, 0.0],
                 [0.0, 0.0, 1.0, 0.0],
                 [0.0, 0.0, 0.0, 1.0f32]
             ],
