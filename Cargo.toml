@@ -1,0 +1,10 @@
+[package]
+name = "camera_proc"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+flume = "0.10.9"
+glium = "0.30.1"
+glutin = "0.27.0"
+nokhwa = { version = "0.3.2", features = ["input-v4l"] }
