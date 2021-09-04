@@ -195,6 +195,7 @@ dependencies = [
  "flume",
  "glium",
  "glutin",
+ "image",
  "nokhwa",
 ]
 
