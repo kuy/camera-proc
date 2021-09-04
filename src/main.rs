@@ -16,11 +16,12 @@ pub struct Vertex {
 fn main() {
     let (tx, rx) = flume::unbounded();
     thread::spawn(move || {
+        let fps = 10;
         let mut camera = Camera::new_with(
             4,
             640,
             480,
-            10,
+            fps,
             nokhwa::FrameFormat::MJPEG,
             nokhwa::CaptureAPIBackend::Auto,
         )
@@ -32,7 +33,7 @@ fn main() {
                 "Captured frame {}x{} @ {}FPS size {}",
                 frame.width(),
                 frame.height(),
-                30,
+                fps,
                 frame.len()
             );
             tx.send(frame).unwrap()
