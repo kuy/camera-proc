@@ -1,3 +1,4 @@
+use asdf_pixel_sort::sort;
 use glium::{
     implement_vertex, index::PrimitiveType, program, texture::RawImage2d, uniform, Display,
     IndexBuffer, Surface, Texture2d, VertexBuffer,
@@ -13,15 +14,13 @@ pub struct Vertex {
 }
 
 fn main() {
-    println!("Hello, world!");
-
     let (tx, rx) = flume::unbounded();
     thread::spawn(move || {
         let mut camera = Camera::new_with(
             4,
-            800,
-            600,
-            30,
+            640,
+            480,
+            10,
             nokhwa::FrameFormat::MJPEG,
             nokhwa::CaptureAPIBackend::Auto,
         )
@@ -106,8 +105,12 @@ fn main() {
 
     gl_event_loop.run(move |event, _window, ctrl| {
         let before_capture = Instant::now();
-        let frame = rx.recv().unwrap();
+        let mut frame = rx.recv().unwrap();
         let after_capture = Instant::now();
+
+        let before_sort = Instant::now();
+        sort(&mut frame, 16);
+        let after_sort = Instant::now();
 
         let width = &frame.width();
         let height = &frame.height();
@@ -149,8 +152,9 @@ fn main() {
         }
 
         println!(
-            "Took {}ms to capture",
-            after_capture.duration_since(before_capture).as_millis()
+            "Took {}ms to capture, {}ms to sort",
+            after_capture.duration_since(before_capture).as_millis(),
+            after_sort.duration_since(before_sort).as_millis(),
         )
     })
 }
