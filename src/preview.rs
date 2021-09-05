@@ -15,7 +15,7 @@ use std::{
 pub fn run(rx: flume::Receiver<RgbImage>) -> JoinHandle<()> {
     thread::spawn(move || {
         let gl_event_loop: EventLoop<()> = EventLoop::new_any_thread();
-        let window_builder = WindowBuilder::new();
+        let window_builder = WindowBuilder::new().with_title("prv | ENDNAUT");
         let context_builder = ContextBuilder::new().with_vsync(true);
         let gl_display = Display::new(window_builder, context_builder, &gl_event_loop).unwrap();
 
@@ -79,6 +79,14 @@ pub fn run(rx: flume::Receiver<RgbImage>) -> JoinHandle<()> {
         .unwrap();
 
         gl_event_loop.run(move |event, _window, ctrl| {
+            if rx.len() > 3 {
+                log::warn!("Lots of messages: len={}", rx.len());
+                for _ in 1..rx.len() {
+                    rx.recv().unwrap(); // drop frame
+                }
+                log::warn!("Cleared: len={}", rx.len());
+            }
+
             let before_capture = Instant::now();
             let mut frame = rx.recv().unwrap();
             let after_capture = Instant::now();
@@ -126,7 +134,7 @@ pub fn run(rx: flume::Receiver<RgbImage>) -> JoinHandle<()> {
                 _ => {}
             }
 
-            println!(
+            log::debug!(
                 "Took {}ms to capture, {}ms to sort",
                 after_capture.duration_since(before_capture).as_millis(),
                 after_sort.duration_since(before_sort).as_millis(),
