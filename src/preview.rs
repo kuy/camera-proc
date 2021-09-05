@@ -12,10 +12,15 @@ use std::{
     time::Instant,
 };
 
-pub fn run(rx: flume::Receiver<RgbImage>) -> JoinHandle<()> {
+#[derive(Debug)]
+pub enum Config {
+    Threshold(u32),
+}
+
+pub fn run(rx: flume::Receiver<RgbImage>, from_ui: flume::Receiver<Config>) -> JoinHandle<()> {
     thread::spawn(move || {
         let gl_event_loop: EventLoop<()> = EventLoop::new_any_thread();
-        let window_builder = WindowBuilder::new().with_title("prv | ENDNAUT");
+        let window_builder = WindowBuilder::new().with_title("prvw | ENDNAUT");
         let context_builder = ContextBuilder::new().with_vsync(true);
         let gl_display = Display::new(window_builder, context_builder, &gl_event_loop).unwrap();
 
@@ -78,11 +83,21 @@ pub fn run(rx: flume::Receiver<RgbImage>) -> JoinHandle<()> {
         )
         .unwrap();
 
+        let mut black_threshold = 16;
+
         gl_event_loop.run(move |event, _window, ctrl| {
+            // Receive commands to change configuration
+            while !from_ui.is_empty() {
+                match from_ui.recv().expect("should be get") {
+                    Config::Threshold(black) => black_threshold = black,
+                }
+            }
+
+            // Clean up frame buffer
             if rx.len() > 3 {
                 log::warn!("Lots of messages: len={}", rx.len());
                 for _ in 1..rx.len() {
-                    rx.recv().unwrap(); // drop frame
+                    rx.recv().unwrap(); // drop
                 }
                 log::warn!("Cleared: len={}", rx.len());
             }
@@ -92,7 +107,7 @@ pub fn run(rx: flume::Receiver<RgbImage>) -> JoinHandle<()> {
             let after_capture = Instant::now();
 
             let before_sort = Instant::now();
-            sort(&mut frame, 16);
+            sort(&mut frame, black_threshold);
             let after_sort = Instant::now();
 
             let width = &frame.width();

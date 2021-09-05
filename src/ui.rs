@@ -1,3 +1,4 @@
+use crate::preview::Config;
 use eframe::{egui, epi};
 use nokhwa::CameraInfo;
 
@@ -24,10 +25,12 @@ pub struct App {
     // Context
     to_camera: flume::Sender<Command>,
     from_camera: flume::Receiver<Response>,
+    to_preview: flume::Sender<Config>,
 
     // State
     devices: Vec<CameraInfo>,
     selected_camera: CameraIndex,
+    black_threshold: u32,
 }
 
 impl epi::App for App {
@@ -51,8 +54,10 @@ impl epi::App for App {
                 .show(ui, |ui| {
                     let Self {
                         to_camera,
+                        to_preview,
                         selected_camera,
                         devices,
+                        black_threshold,
                         ..
                     } = self;
 
@@ -77,17 +82,34 @@ impl epi::App for App {
                             .send(Command::CameraChanged(selected_camera.clone()))
                             .unwrap();
                     }
+
+                    let before = *black_threshold;
+                    ui.label("Black threshold");
+                    ui.add(egui::Slider::new(black_threshold, 0..=255));
+                    ui.end_row();
+
+                    if before != *black_threshold {
+                        to_preview
+                            .send(Config::Threshold(*black_threshold))
+                            .unwrap();
+                    }
                 });
         });
     }
 }
 
-pub fn enter_loop(to_camera: flume::Sender<Command>, from_camera: flume::Receiver<Response>) {
+pub fn enter_loop(
+    to_camera: flume::Sender<Command>,
+    from_camera: flume::Receiver<Response>,
+    to_preview: flume::Sender<Config>,
+) {
     let app = App {
         to_camera,
         from_camera,
+        to_preview,
         devices: vec![],
         selected_camera: CameraIndex(0),
+        black_threshold: 16,
     };
     let options = eframe::NativeOptions {
         transparent: true,
