@@ -1,5 +1,5 @@
 use crate::vertex::Vertex;
-use asdf_pixel_sort::sort;
+use asdf_pixel_sort::{sort, PColor};
 use glium::{
     implement_vertex, index::PrimitiveType, program, texture::RawImage2d, uniform, Display,
     IndexBuffer, Surface, Texture2d, VertexBuffer,
@@ -14,7 +14,7 @@ use std::{
 
 #[derive(Debug)]
 pub enum Config {
-    Threshold(u32),
+    Threshold(PColor),
 }
 
 pub fn run(rx: flume::Receiver<RgbImage>, from_ui: flume::Receiver<Config>) -> JoinHandle<()> {
@@ -83,7 +83,7 @@ pub fn run(rx: flume::Receiver<RgbImage>, from_ui: flume::Receiver<Config>) -> J
         )
         .unwrap();
 
-        let mut black_threshold = 16;
+        let mut black_threshold = crate::ui::BLACK.clone();
 
         gl_event_loop.run(move |event, _window, ctrl| {
             // Receive commands to change configuration
@@ -107,7 +107,7 @@ pub fn run(rx: flume::Receiver<RgbImage>, from_ui: flume::Receiver<Config>) -> J
             let after_capture = Instant::now();
 
             let before_sort = Instant::now();
-            sort(&mut frame, black_threshold);
+            sort(&mut frame, &black_threshold);
             let after_sort = Instant::now();
 
             let width = &frame.width();

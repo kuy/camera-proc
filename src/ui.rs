@@ -1,6 +1,8 @@
 use crate::preview::Config;
+use asdf_pixel_sort::PColor;
 use eframe::{egui, epi};
 use nokhwa::CameraInfo;
+use once_cell::sync::Lazy;
 
 #[derive(Debug)]
 pub enum Command {
@@ -30,7 +32,7 @@ pub struct App {
     // State
     devices: Vec<CameraInfo>,
     selected_camera: CameraIndex,
-    black_threshold: u32,
+    black_threshold: PColor,
 }
 
 impl epi::App for App {
@@ -83,20 +85,27 @@ impl epi::App for App {
                             .unwrap();
                     }
 
-                    let before = *black_threshold;
+                    let mut value = (black_threshold.red as u32
+                        + black_threshold.green as u32
+                        + black_threshold.blue as u32)
+                        / 3;
+                    let before = value;
                     ui.label("Black threshold");
-                    ui.add(egui::Slider::new(black_threshold, 0..=255));
+                    ui.add(egui::Slider::new(&mut value, 0..=255));
                     ui.end_row();
 
-                    if before != *black_threshold {
+                    if before != value {
+                        *black_threshold = PColor::new(value as u8, value as u8, value as u8);
                         to_preview
-                            .send(Config::Threshold(*black_threshold))
+                            .send(Config::Threshold(black_threshold.clone()))
                             .unwrap();
                     }
                 });
         });
     }
 }
+
+pub static BLACK: Lazy<PColor> = Lazy::new(|| PColor::new(0, 0, 0));
 
 pub fn enter_loop(
     to_camera: flume::Sender<Command>,
@@ -109,7 +118,7 @@ pub fn enter_loop(
         to_preview,
         devices: vec![],
         selected_camera: CameraIndex(0),
-        black_threshold: 16,
+        black_threshold: BLACK.clone(),
     };
     let options = eframe::NativeOptions {
         transparent: true,
