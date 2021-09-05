@@ -1,9 +1,16 @@
 mod camera;
-mod display;
+mod preview;
+mod ui;
 mod vertex;
 
 fn main() {
     let (tx, rx) = flume::unbounded();
-    camera::capture(tx);
-    display::render(rx);
+
+    let camera_thread = camera::capture(tx);
+    let preview_thread = preview::run(rx);
+
+    ui::enter_loop();
+
+    camera_thread.join().unwrap();
+    preview_thread.join().unwrap();
 }

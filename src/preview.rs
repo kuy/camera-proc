@@ -4,14 +4,17 @@ use glium::{
     implement_vertex, index::PrimitiveType, program, texture::RawImage2d, uniform, Display,
     IndexBuffer, Surface, Texture2d, VertexBuffer,
 };
+use glutin::platform::unix::EventLoopExtUnix;
 use glutin::{event_loop::EventLoop, window::WindowBuilder, ContextBuilder};
 use image::RgbImage;
-use std::thread;
-use std::time::Instant;
+use std::{
+    thread::{self, JoinHandle},
+    time::Instant,
+};
 
-pub fn render(rx: flume::Receiver<RgbImage>) {
+pub fn run(rx: flume::Receiver<RgbImage>) -> JoinHandle<()> {
     thread::spawn(move || {
-        let gl_event_loop = EventLoop::new();
+        let gl_event_loop: EventLoop<()> = EventLoop::new_any_thread();
         let window_builder = WindowBuilder::new();
         let context_builder = ContextBuilder::new().with_vsync(true);
         let gl_display = Display::new(window_builder, context_builder, &gl_event_loop).unwrap();
@@ -129,5 +132,5 @@ pub fn render(rx: flume::Receiver<RgbImage>) {
                 after_sort.duration_since(before_sort).as_millis(),
             )
         })
-    });
+    })
 }

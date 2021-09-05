@@ -1,8 +1,8 @@
 use image::RgbImage;
 use nokhwa::Camera;
-use std::thread;
+use std::thread::{self, JoinHandle};
 
-pub fn capture(tx: flume::Sender<RgbImage>) {
+pub fn capture(tx: flume::Sender<RgbImage>) -> JoinHandle<()> {
     thread::spawn(move || {
         let fps = 10;
         let mut camera = Camera::new_with(
@@ -26,5 +26,5 @@ pub fn capture(tx: flume::Sender<RgbImage>) {
             );
             tx.send(frame).unwrap()
         }
-    });
+    })
 }
