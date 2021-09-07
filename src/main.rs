@@ -1,3 +1,5 @@
+use asdf_pixel_sort::Options;
+
 mod camera;
 mod preview;
 mod ui;
@@ -14,10 +16,12 @@ fn main() {
     let (cap_tx, cap_rx) = flume::unbounded();
     let (cfg_tx, cfg_rx) = flume::unbounded();
 
-    let camera_thread = camera::capture(cap_tx, cmd_rx, res_tx);
-    let preview_thread = preview::run(cap_rx, cfg_rx);
+    let options = Options::default();
 
-    ui::enter_loop(cmd_tx, res_rx, cfg_tx);
+    let camera_thread = camera::capture(cap_tx, cmd_rx, res_tx);
+    let preview_thread = preview::run(cap_rx, cfg_rx, &options);
+
+    ui::enter_loop(cmd_tx, res_rx, cfg_tx, &options);
 
     camera_thread.join().unwrap();
     preview_thread.join().unwrap();

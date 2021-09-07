@@ -1,8 +1,7 @@
 use crate::preview::Config;
-use asdf_pixel_sort::PColor;
+use asdf_pixel_sort::{Mode, Options, PColor};
 use eframe::{egui, epi};
 use nokhwa::CameraInfo;
-use once_cell::sync::Lazy;
 
 #[derive(Debug)]
 pub enum Command {
@@ -29,10 +28,16 @@ pub struct App {
     from_camera: flume::Receiver<Response>,
     to_preview: flume::Sender<Config>,
 
-    // State
+    // Data
     devices: Vec<CameraInfo>,
+    // modes: Vec<Mode>,
+
+    // State
     selected_camera: CameraIndex,
-    black_threshold: PColor,
+    options: Options,
+    black: u16,
+    brightness: u8,
+    white: u16,
 }
 
 impl epi::App for App {
@@ -59,7 +64,9 @@ impl epi::App for App {
                         to_preview,
                         selected_camera,
                         devices,
-                        black_threshold,
+                        options,
+                        black,
+                        brightness,
                         ..
                     } = self;
 
@@ -85,32 +92,41 @@ impl epi::App for App {
                             .unwrap();
                     }
 
-                    let mut value = (black_threshold.red as u32
-                        + black_threshold.green as u32
-                        + black_threshold.blue as u32)
-                        / 3;
-                    let before = value;
-                    ui.label("Black threshold");
-                    ui.add(egui::Slider::new(&mut value, 0..=255));
+                    ui.label("Mode");
+                    ui.label(format!("{:?}", options.mode));
                     ui.end_row();
 
-                    if before != value {
-                        *black_threshold = PColor::new(value as u8, value as u8, value as u8);
-                        to_preview
-                            .send(Config::Threshold(black_threshold.clone()))
-                            .unwrap();
+                    let before = *black;
+                    ui.label("Black threshold");
+                    ui.add(egui::Slider::new(black, 0..=2000));
+                    ui.end_row();
+
+                    if &before != black {
+                        let map = map_fn((0, 2000), (-16777216, -1));
+                        let color = PColor::from_raw(map(*black));
+                        options.mode = Mode::Black(color);
+                        to_preview.send(Config::Mode(options.mode.clone())).unwrap();
+                    }
+
+                    let before = *brightness;
+                    ui.label("Brightness threshold");
+                    ui.add(egui::Slider::new(brightness, 0..=255));
+                    ui.end_row();
+
+                    if &before != brightness {
+                        options.mode = Mode::Brightness(*brightness);
+                        to_preview.send(Config::Mode(options.mode.clone())).unwrap();
                     }
                 });
         });
     }
 }
 
-pub static BLACK: Lazy<PColor> = Lazy::new(|| PColor::new(0, 0, 0));
-
 pub fn enter_loop(
     to_camera: flume::Sender<Command>,
     from_camera: flume::Receiver<Response>,
     to_preview: flume::Sender<Config>,
+    options: &Options,
 ) {
     let app = App {
         to_camera,
@@ -118,7 +134,10 @@ pub fn enter_loop(
         to_preview,
         devices: vec![],
         selected_camera: CameraIndex(0),
-        black_threshold: BLACK.clone(),
+        options: options.clone(),
+        black: 0,
+        brightness: 60,
+        white: 0,
     };
     let options = eframe::NativeOptions {
         transparent: true,
@@ -126,4 +145,48 @@ pub fn enter_loop(
         ..Default::default()
     };
     eframe::run_native(Box::new(app), options);
+}
+
+fn map_fn(domain: (u16, u16), codomain: (i32, i32)) -> impl Fn(u16) -> i32 {
+    // TODO: check pre-conditions
+
+    move |input| {
+        let (input_min, input_max) = domain;
+        let (output_min, output_max) = codomain;
+
+        if input <= input_min {
+            return output_min;
+        }
+
+        if input_max <= input {
+            return output_max;
+        }
+
+        let ratio = (input - input_min) as f64 / (input_max - input_min) as f64;
+        ((output_max - output_min) as f64 * ratio + output_min as f64) as i32
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_map_fn() {
+        let map = map_fn((10, 110), (-127, 127));
+        assert_eq!(-127, map(9));
+        assert_eq!(-127, map(10));
+        assert_eq!(0, map(60));
+        assert_eq!(-50, map(40));
+        assert_eq!(50, map(80));
+        assert_eq!(127, map(110));
+        assert_eq!(127, map(111));
+
+        let map = map_fn((0, 10000), (-16777216, -1));
+        assert_eq!(-16777216, map(0));
+        assert_eq!(-16000430, map(463));
+        assert_eq!(-13000664, map(2251));
+        assert_eq!(-1, map(10000));
+        assert_eq!(-1, map(10001));
+    }
 }

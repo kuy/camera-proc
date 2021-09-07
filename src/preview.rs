@@ -1,5 +1,5 @@
 use crate::vertex::Vertex;
-use asdf_pixel_sort::{sort, PColor};
+use asdf_pixel_sort::{sort_with_options, Mode, Options};
 use glium::{
     implement_vertex, index::PrimitiveType, program, texture::RawImage2d, uniform, Display,
     IndexBuffer, Surface, Texture2d, VertexBuffer,
@@ -14,10 +14,15 @@ use std::{
 
 #[derive(Debug)]
 pub enum Config {
-    Threshold(PColor),
+    Mode(Mode),
 }
 
-pub fn run(rx: flume::Receiver<RgbImage>, from_ui: flume::Receiver<Config>) -> JoinHandle<()> {
+pub fn run(
+    rx: flume::Receiver<RgbImage>,
+    from_ui: flume::Receiver<Config>,
+    options: &Options,
+) -> JoinHandle<()> {
+    let options = options.clone();
     thread::spawn(move || {
         let gl_event_loop: EventLoop<()> = EventLoop::new_any_thread();
         let window_builder = WindowBuilder::new().with_title("prvw | ENDNAUT");
@@ -83,13 +88,13 @@ pub fn run(rx: flume::Receiver<RgbImage>, from_ui: flume::Receiver<Config>) -> J
         )
         .unwrap();
 
-        let mut black_threshold = crate::ui::BLACK.clone();
+        let mut options = options;
 
         gl_event_loop.run(move |event, _window, ctrl| {
             // Receive commands to change configuration
             while !from_ui.is_empty() {
                 match from_ui.recv().expect("should be get") {
-                    Config::Threshold(black) => black_threshold = black,
+                    Config::Mode(mode) => options.mode = mode,
                 }
             }
 
@@ -107,7 +112,7 @@ pub fn run(rx: flume::Receiver<RgbImage>, from_ui: flume::Receiver<Config>) -> J
             let after_capture = Instant::now();
 
             let before_sort = Instant::now();
-            sort(&mut frame, &black_threshold);
+            sort_with_options(&mut frame, &options);
             let after_sort = Instant::now();
 
             let width = &frame.width();
