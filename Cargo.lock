@@ -95,7 +95,9 @@ checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
 
 [[package]]
 name = "asdf-pixel-sort"
-version = "0.0.6"
+version = "0.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68e965ba7735598da3c9b87aebd3c170a11a2bda1b7485dd7f08c7c71830c393"
 dependencies = [
  "image",
  "once_cell",
