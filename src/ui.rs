@@ -1,7 +1,8 @@
 use crate::preview::Config;
-use asdf_pixel_sort::{Mode, Options, PColor};
+use asdf_pixel_sort::{Mode, Options, PColor, DEFAULT_BLACK, DEFAULT_BRIGHTNESS, DEFAULT_WHITE};
 use eframe::{egui, epi};
 use nokhwa::CameraInfo;
+use std::ops::Sub;
 
 #[derive(Debug)]
 pub enum Command {
@@ -67,6 +68,7 @@ impl epi::App for App {
                         options,
                         black,
                         brightness,
+                        white,
                         ..
                     } = self;
 
@@ -98,11 +100,11 @@ impl epi::App for App {
 
                     let before = *black;
                     ui.label("Black threshold");
-                    ui.add(egui::Slider::new(black, 0..=2000));
+                    ui.add(egui::Slider::new(black, 0..=1000));
                     ui.end_row();
 
                     if &before != black {
-                        let map = map_fn((0, 2000), (-16777216, -1));
+                        let map = map_fn((0, 1000), (-16777216, -1));
                         let color = PColor::from_raw(map(*black));
                         options.mode = Mode::Black(color);
                         to_preview.send(Config::Mode(options.mode.clone())).unwrap();
@@ -117,6 +119,18 @@ impl epi::App for App {
                         options.mode = Mode::Brightness(*brightness);
                         to_preview.send(Config::Mode(options.mode.clone())).unwrap();
                     }
+
+                    let before = *white;
+                    ui.label("White threshold");
+                    ui.add(egui::Slider::new(white, 0..=1000));
+                    ui.end_row();
+
+                    if &before != white {
+                        let map = map_fn((0, 1000), (-16777216, -1));
+                        let color = PColor::from_raw(map(*white));
+                        options.mode = Mode::White(color);
+                        to_preview.send(Config::Mode(options.mode.clone())).unwrap();
+                    }
                 });
         });
     }
@@ -128,6 +142,7 @@ pub fn enter_loop(
     to_preview: flume::Sender<Config>,
     options: &Options,
 ) {
+    let scale = map_fn_r((-16777216, -1), (0, 1000));
     let app = App {
         to_camera,
         from_camera,
@@ -135,9 +150,9 @@ pub fn enter_loop(
         devices: vec![],
         selected_camera: CameraIndex(0),
         options: options.clone(),
-        black: 0,
-        brightness: 60,
-        white: 0,
+        black: scale(DEFAULT_BLACK.as_raw()),
+        brightness: DEFAULT_BRIGHTNESS,
+        white: scale(DEFAULT_WHITE.as_raw()),
     };
     let options = eframe::NativeOptions {
         transparent: true,
@@ -164,6 +179,49 @@ fn map_fn(domain: (u16, u16), codomain: (i32, i32)) -> impl Fn(u16) -> i32 {
 
         let ratio = (input - input_min) as f64 / (input_max - input_min) as f64;
         ((output_max - output_min) as f64 * ratio + output_min as f64) as i32
+    }
+}
+
+fn map_fn_r(domain: (i32, i32), codomain: (u16, u16)) -> impl Fn(i32) -> u16 {
+    // TODO: check pre-conditions
+
+    move |input| {
+        let (input_min, input_max) = domain;
+        let (output_min, output_max) = codomain;
+
+        if input <= input_min {
+            return output_min;
+        }
+
+        if input_max <= input {
+            return output_max;
+        }
+
+        let ratio = (input - input_min) as f64 / (input_max - input_min) as f64;
+        ((output_max - output_min) as f64 * ratio + output_min as f64) as u16
+    }
+}
+
+fn scale_fn<D, R>(domain: (D, D), range: (R, R)) -> impl Fn(D) -> R
+where
+    D: PartialOrd + Sub<D> + Copy,
+    R: Sub<R> + From<f64> + Copy,
+    f64: From<<D as Sub>::Output> + From<<R as Sub>::Output> + From<R>,
+{
+    move |input| {
+        let (input_min, input_max) = domain;
+        let (output_min, output_max) = range;
+
+        if input <= input_min {
+            return output_min;
+        }
+
+        if input_max <= input {
+            return output_max;
+        }
+
+        let ratio = f64::from(input - input_min) / f64::from(input_max - input_min);
+        R::from(f64::from(output_max - output_min) * ratio + f64::from(output_min))
     }
 }
 
