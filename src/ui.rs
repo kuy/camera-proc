@@ -2,7 +2,6 @@ use crate::preview::Config;
 use asdf_pixel_sort::{Mode, Options, PColor, DEFAULT_BLACK, DEFAULT_BRIGHTNESS, DEFAULT_WHITE};
 use eframe::{egui, epi};
 use nokhwa::CameraInfo;
-use std::ops::Sub;
 
 #[derive(Debug)]
 pub enum Command {
@@ -199,29 +198,6 @@ fn map_fn_r(domain: (i32, i32), codomain: (u16, u16)) -> impl Fn(i32) -> u16 {
 
         let ratio = (input - input_min) as f64 / (input_max - input_min) as f64;
         ((output_max - output_min) as f64 * ratio + output_min as f64) as u16
-    }
-}
-
-fn scale_fn<D, R>(domain: (D, D), range: (R, R)) -> impl Fn(D) -> R
-where
-    D: PartialOrd + Sub<D> + Copy,
-    R: Sub<R> + From<f64> + Copy,
-    f64: From<<D as Sub>::Output> + From<<R as Sub>::Output> + From<R>,
-{
-    move |input| {
-        let (input_min, input_max) = domain;
-        let (output_min, output_max) = range;
-
-        if input <= input_min {
-            return output_min;
-        }
-
-        if input_max <= input {
-            return output_max;
-        }
-
-        let ratio = f64::from(input - input_min) / f64::from(input_max - input_min);
-        R::from(f64::from(output_max - output_min) * ratio + f64::from(output_min))
     }
 }
 
