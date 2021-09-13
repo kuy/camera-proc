@@ -1,5 +1,5 @@
 use crate::vertex::Vertex;
-use asdf_pixel_sort::{sort_with_options, Mode, Options};
+use asdf_pixel_sort::{sort_with_options, Direction, Mode, Options};
 use glium::{
     implement_vertex, index::PrimitiveType, program, texture::RawImage2d, uniform, Display,
     IndexBuffer, Surface, Texture2d, VertexBuffer,
@@ -15,6 +15,7 @@ use std::{
 #[derive(Debug)]
 pub enum Config {
     Mode(Mode),
+    Direction(Direction),
 }
 
 pub fn run(
@@ -95,6 +96,7 @@ pub fn run(
             while !from_ui.is_empty() {
                 match from_ui.recv().expect("should be get") {
                     Config::Mode(mode) => options.mode = mode,
+                    Config::Direction(dir) => options.direction = dir,
                 }
             }
 

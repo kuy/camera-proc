@@ -1,5 +1,7 @@
 use crate::preview::Config;
-use asdf_pixel_sort::{Mode, Options, PColor, DEFAULT_BLACK, DEFAULT_BRIGHTNESS, DEFAULT_WHITE};
+use asdf_pixel_sort::{
+    Direction, Mode, Options, PColor, DEFAULT_BLACK, DEFAULT_BRIGHTNESS, DEFAULT_WHITE,
+};
 use eframe::{egui, epi};
 use nokhwa::CameraInfo;
 
@@ -129,6 +131,27 @@ impl epi::App for App {
                         let color = PColor::from_raw(map(*white));
                         options.mode = Mode::White(color);
                         to_preview.send(Config::Mode(options.mode.clone())).unwrap();
+                    }
+
+                    let before = options.direction.clone();
+                    ui.label("Direction");
+                    egui::ComboBox::from_label("Choose direction")
+                        .selected_text(format!("{:?}", options.direction))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut options.direction, Direction::Both, "Both");
+                            ui.selectable_value(
+                                &mut options.direction,
+                                Direction::Column,
+                                "Column",
+                            );
+                            ui.selectable_value(&mut options.direction, Direction::Row, "Row");
+                        });
+                    ui.end_row();
+
+                    if before != options.direction {
+                        to_preview
+                            .send(Config::Direction(options.direction.clone()))
+                            .unwrap();
                     }
                 });
         });
