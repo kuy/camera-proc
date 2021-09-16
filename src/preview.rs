@@ -4,6 +4,7 @@ use glium::{
     implement_vertex, index::PrimitiveType, program, texture::RawImage2d, uniform, Display,
     IndexBuffer, Surface, Texture2d, VertexBuffer,
 };
+#[cfg(not(target_os = "macos"))]
 use glutin::platform::unix::EventLoopExtUnix;
 use glutin::{event_loop::EventLoop, window::WindowBuilder, ContextBuilder};
 use image::RgbImage;
@@ -25,6 +26,9 @@ pub fn run(
 ) -> JoinHandle<()> {
     let options = options.clone();
     thread::spawn(move || {
+        #[cfg(target_os = "macos")]
+        let gl_event_loop = EventLoop::new();
+        #[cfg(not(target_os = "macos"))]
         let gl_event_loop: EventLoop<()> = EventLoop::new_any_thread();
         let window_builder = WindowBuilder::new().with_title("prvw | ENDNAUT");
         let context_builder = ContextBuilder::new().with_vsync(true);
