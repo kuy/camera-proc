@@ -13,7 +13,7 @@ glium = "0.30.2"
 glutin = "0.27.0"
 image = { version = "0.23.14", default-features = false }
 log = "0.4.20"
-once_cell = "1.18.0"
+once_cell = "1.19.0"
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
 nokhwa = { version = "0.3.2", features = ["input-v4l"] }
